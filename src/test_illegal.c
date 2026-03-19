@@ -41,7 +41,7 @@ void test_illegal(void)
 	ASSERT(status.htval == 0, "htval = 0");
 
 	ASSERT(FIELD(status.sstatus, SSTATUS_SPP) == 1, "sstatus.SPP = 1");
-	ASSERT(FIELD(status.hstatus, HSTATUS_SPV) == 1, "sstatus.SPV = 1");
+	ASSERT(FIELD(status.hstatus, HSTATUS_SPV) == 1, "hstatus.SPV = 1");
 	ASSERT(FIELD(status.hstatus, HSTATUS_SPVP) == 1, "hstatus.SPVP = 1");
 	ASSERT(FIELD(status.hstatus, HSTATUS_GVA) == 0, "hstatus.GVA = 0");
 }
