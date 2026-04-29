@@ -105,8 +105,21 @@ void test_misaligned(void)
 		misaligned_amo_okay = true;
 	} else {
 		LOG("Misaligned AMO failed");
-		ASSERT(status.scause == CAUSE_MISALIGNED_STORE,
-		       "scause == \"Misaligned store/AMO\"");
+		// Misaligned scalar AMO accesses are implementation-defined: a
+		// DUT may raise either CAUSE_MISALIGNED_STORE (cause 6) or
+		// CAUSE_STORE_ACCESS_FAULT (cause 7). Both are conformant per
+		// the priv spec. We accept either here so the test runs against
+		// any conformant DUT.
+		//
+		// Ideally a test should pin down a single expected cause for
+		// the platform it targets, configured via the platform/PMA
+		// misalignment settings, and fail loudly if the DUT deviates.
+		// We accept both for now because this suite is run against
+		// multiple model configurations Same goes for the test down
+		// below.
+		ASSERT(status.scause == CAUSE_MISALIGNED_STORE ||
+			       status.scause == CAUSE_STORE_ACCESS,
+		       "scause is misaligned-store or store/AMO access fault");
 		ASSERT(status.stval == 0x1ff003,
 		       "stval = 0x1ff003 (GVA of AMO)");
 	}
@@ -116,25 +129,22 @@ void test_misaligned(void)
 	hstatus = csr_read(hstatus);
 	hstatus &= ~HSTATUS_GVA;
 	csr_write(hstatus, hstatus);
-
 	gen_task(&regs, STACK(stack1), payload_amo, 0x1ffffd);
 	run_task(&regs, &status, TASK_VS);
-
 	if (misaligned_amo_okay) {
 		ASSERT(status.scause == CAUSE_STORE_GUEST_PAGE_FAULT,
 		       "scause == \"Store/AMO guest-page fault\"");
-
 		ASSERT(status.stval == 0x200000,
 		       "stval = 0x200000 (Faulting page GVA of AMO)");
 		ASSERT(status.htval == 0 || status.htval == (0x200000 >> 2),
 		       "htval = One of { (0x200000 >> 2) (Faulting page GPA of AMO >> 2), 0 }");
 	} else {
-		ASSERT(status.scause == CAUSE_MISALIGNED_STORE,
-		       "scause == \"Misaligned store/AMO\"");
-
+		// See comment above
+		ASSERT(status.scause == CAUSE_MISALIGNED_STORE ||
+			       status.scause == CAUSE_STORE_ACCESS,
+		       "scause is misaligned-store or store/AMO access fault");
 		ASSERT(status.stval == 0x1ffffd,
 		       "stval = 0x1ffffd (GVA of AMO)");
 	}
-
 	ASSERT(FIELD(status.hstatus, HSTATUS_GVA) == 1, "hstatus.GVA = 1");
 }
